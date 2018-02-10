@@ -65,27 +65,32 @@ def dmenu(options, dmenu):
 def get_windows():
     """Get all windows."""
     windows = parse_for_windows(i3.get_tree(), [])
+
     return create_lookup_table(windows)
 
 
-def parse_for_windows(tree_dict, window_list):
+def parse_for_windows(tree_dict, window_list, workspace=None):
     is_leaf_node = False
+    if tree_dict.get('type') == "workspace":
+        workspace = tree_dict.get('name')
 
     if ("nodes" in tree_dict and len(tree_dict["nodes"]) > 0):
         is_leaf_node = True
         for node in tree_dict["nodes"]:
-            parse_for_windows(node, window_list)
+            parse_for_windows(node, window_list, workspace)
 
     if ("floating_nodes" in tree_dict and
        len(tree_dict["floating_nodes"]) > 0):
         is_leaf_node = True
         for node in tree_dict["floating_nodes"]:
-            parse_for_windows(node, window_list)
+            parse_for_windows(node, window_list, workspace)
 
     if not is_leaf_node:
         if (tree_dict["layout"] != "dockarea" and
            not tree_dict["window"] is None):
-            window_list.append(tree_dict)
+            window = tree_dict
+            window["workspace"] = workspace
+            window_list.append(window)
 
     return window_list
 
@@ -227,15 +232,41 @@ def degap():
         i += 1
 
 
+def prefix_for_window(window):
+    """
+
+    Adds workspace prefix for windows, but not for workspaces.
+    The i3-tree returns different fields for workspaces and windows in the tree structure.
+    This functions checks whether a field exclusive to windows exists.
+    """
+
+    if not window.get("border"):
+        # this is a workspace
+        return ""
+
+    workspace = window.get("workspace")
+
+    if workspace and workspace != "__i3_scratch":
+        prefix = "workspace {} ".format(workspace) \
+                + (" " if int(workspace) < 10 else "")
+    else:
+        prefix = "scratchpad   "
+
+    return prefix
+
+
 def get_lookup_title(window):
-    """Get the lookup title for a window."""
+    """Get the lookup title for a window or workspace."""
     parts = window.get("name").split(" - ")
     wclass = window.get("window_properties", {}).get("class")
     mark = window.get("mark")
     if wclass:
         parts = [part for part in parts if part.lower() != wclass.lower()]
         parts.insert(0, wclass)
-    title = " - ".join(parts)
+
+    prefix = prefix_for_window(window)
+
+    title = prefix + " - ".join(parts)
     if mark:
         title += " [{}]".format(mark)
     return title
@@ -243,7 +274,7 @@ def get_lookup_title(window):
 
 def create_lookup_table(windows):
     """
-    Create a lookup table from the given list of windows.
+    Create a lookup table from the given list of windows or workspace.
 
     The returned dict is in the format window title → X window id.
     """
@@ -274,6 +305,7 @@ def create_lookup_table(windows):
             # duplicate name of previous window
             # add "(win_id)" as suffix in attempt to make unique
             win_name = "{} ({})".format(win_name, str(win_id))
+
         lookup[win_name] = win_id
     return lookup
 
@@ -368,6 +400,15 @@ def cycle_numbered_workspaces(backwards=False):
 def set_ignore_class_list(str_list):
     global window_class_ignore_list
     window_class_ignore_list = str_list.split(",")
+
+
+def atoi(text):
+    return int(text) if text.isdigit() else text
+
+
+def natural_sort(text):
+    """ https://stackoverflow.com/questions/5967500/how-to-correctly-sort-a-string-with-a-number-inside """
+    return [ atoi(c) for c in re.split('(\d+)', text) ]
 
 
 def main():
@@ -542,7 +583,10 @@ def main():
     dmenu_prompt_args = args.dmenu
     if args.prompt:
         dmenu_prompt_args += " -p '{}'".format(dmenu_prompt)
-    target = dmenu(lookup.keys(), dmenu_prompt_args)
+
+    source = list(lookup.keys())
+    source.sort(key=natural_sort)
+    target = dmenu(source, dmenu_prompt_args)
     ws_id = lookup.get(target)
 
     if not ws_id and args.workspaces:
