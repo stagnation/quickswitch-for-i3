@@ -64,12 +64,17 @@ def dmenu(options, dmenu):
 
 def get_windows():
     """Get all windows."""
-    windows = parse_for_windows(i3.get_tree(), [])
+    windows = parse_for_windows(i3.get_tree())
 
     return create_lookup_table(windows)
 
 
-def parse_for_windows(tree_dict, window_list, workspace=None):
+def parse_for_windows(tree_dict, window_list=[], workspace=None):
+    """
+    Parses the tree_dict for all windows. The window_list and workspace
+    arguments are filled iteratively as the tree is traversed.
+    """
+
     is_leaf_node = False
     if tree_dict.get('type') == "workspace":
         workspace = tree_dict.get('name')
