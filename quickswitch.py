@@ -413,7 +413,7 @@ def atoi(text):
 
 def natural_sort(text):
     """ https://stackoverflow.com/questions/5967500/how-to-correctly-sort-a-string-with-a-number-inside """
-    return [ atoi(c) for c in re.split('(\d+)', text) ]
+    return [atoi(c) for c in re.split('(\d+)', text)]
 
 
 def main():
