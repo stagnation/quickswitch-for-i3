@@ -239,9 +239,8 @@ def degap():
 
 def prefix_for_window(window):
     """
-
-    Adds workspace prefix for windows, but not for workspaces.
-    The i3-tree returns different fields for workspaces and windows in the tree structure.
+    Adds workspace prefix for windows, but not for workspaces. The i3-tree
+    returns different fields for workspaces and windows in the tree structure.
     This functions checks whether a field exclusive to windows exists.
     """
 
@@ -421,14 +420,12 @@ def main():
 
     mutgrp_1 = parser.add_mutually_exclusive_group()
     mutgrp_1.add_argument("-m", "--move", default=False, action="store_true",
-                          help="move a chosen window to the current "
-                          "workspace or moves the current container "
-                          "to the selected workspace")
+                          help="move a chosen window to the current workspace "
+                          "or moves the current container to the selected workspace")
     mutgrp_1.add_argument("-j", "--journey", default=False,
                           action="store_true",
-                          help="moves the current container to a "
-                          "chosen workspace or moves it to a new empty "
-                          "workspace with -e")
+                          help="moves the current container to a chosen "
+                          "workspace or moves it to a new empty workspace with -e")
 
     mutgrp_2 = parser.add_mutually_exclusive_group()
     mutgrp_2.add_argument("-f", "--follow", default=False,
@@ -436,32 +433,30 @@ def main():
                           help="Follow a moved container to the workspace it is moved to")
     mutgrp_2.add_argument("-F", "--followifempty", default=False,
                           action="store_true",
-                          help="Follow a moved container to the workspace it is moved to "
-                          "if the current workspace is empty after moving")
+                          help="Follow a moved container to the workspace it is "
+                          "moved to if the current workspace is empty after moving")
 
     mutgrp_3 = parser.add_mutually_exclusive_group()
     mutgrp_3.add_argument("-s", "--scratchpad", default=False,
                           action="store_true",
-                          help="list scratchpad windows instead of "
-                          "regular ones")
+                          help="list scratchpad windows instead of regular ones")
     mutgrp_3.add_argument("-w", "--workspaces", default=False,
                           action="store_true",
                           help="list workspaces instead of windows")
     mutgrp_3.add_argument("-e", "--empty", default=False,
                           action="store_true",
-                          help="go to the first empty, numbered "
-                          "workspace. Use with -j to send current "
-                          "window to a new empty workspace")
+                          help="go to the first empty, numbered workspace. "
+                          "Use with -j to send current window to a new empty "
+                          "workspace")
     mutgrp_3.add_argument("-E", "--nextempty", default=False,
                           action="store_true",
-                          help="go to the next empty, numbered "
-                          "workspace after the current one. Use "
-                          "with -j to send current window to a new "
-                          "empty workspace")
+                          help="go to the next empty, numbered workspace after "
+                          "the current one. Use with -j to send current window "
+                          "to a new empty workspace")
     mutgrp_3.add_argument("-r", "--regex",
-                          help="find the first window matching the "
-                          "regex and focus/move it. Finds the first "
-                          "matching workspace when used with -j")
+                          help="find the first window matching the regex and "
+                          "focus/move it. Finds the first matching workspace "
+                          "when used with -j")
     mutgrp_3.add_argument("-g", "--degap", action="store_true",
                           help="make numbered workspaces consecutive "
                           "(remove gaps), does not work with other arguments")
@@ -472,13 +467,11 @@ def main():
                           help="go to the previous (numbered) workspace")
     mutgrp_3.add_argument("-u", "--urgent", default=False,
                           action="store_true",
-                          help="go to the first window with the "
-                          "urgency hint set")
+                          help="go to the first window with the urgency hint set")
     mutgrp_3.add_argument("-l", "--launch", default=False,
                           action="store_true",
-                          help="if input to dmenu doesn't match any "
-                          "given option, send the input to shell for "
-                          "interpretation")
+                          help="if input to dmenu doesn't match any given "
+                          "option, send the input to shell for interpretation")
 
     parser.add_argument("-C", "--ignore-classes", default="",
                         help="comma separated list of window classes "
