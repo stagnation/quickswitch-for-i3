@@ -62,11 +62,14 @@ def dmenu(options, dmenu):
     return stdout.decode("utf-8").strip("\n")
 
 
-def get_windows():
-    """Get all windows."""
+def get_windows(show_workspace_prefix=False):
+    """
+    Get all windows.
+    show_workspace_prefix is passed through and governs how items are displayed
+    """
     windows = parse_for_windows(i3.get_tree())
 
-    return create_lookup_table(windows)
+    return create_lookup_table(windows, show_workspace_prefix)
 
 
 def parse_for_windows(tree_dict, window_list=[], workspace=None):
@@ -136,8 +139,12 @@ def find_workspace_by_regex(regex, insensitive=False):
     return False
 
 
-def get_scratchpad():
-    """Get all windows on the scratchpad."""
+def get_scratchpad(unused=False):
+    """
+    Get all windows on the scratchpad.
+
+    NOTE: The argument is not used but needed for compatibilty with get_windows
+    """
     scratchpad = i3.filter(name="__i3_scratch")[0]
     nodes = scratchpad["floating_nodes"]
     windows = i3.filter(tree=nodes, nodes=[])
@@ -170,12 +177,14 @@ def workspace_name_from_number(ws_number):
     return ws_number
 
 
-def get_workspaces():
+def get_workspaces(unused=False):
     """
     Returns all workspace names.
 
     NOTE: This returns a map of name → name, which is rather redundant, but
     makes it possible to use the result without changing much in main().
+
+    NOTE: The argument is not used but needed for compatibilty with get_windows
     """
     workspaces = i3.get_workspaces()
     for ws in workspaces:
@@ -259,8 +268,11 @@ def prefix_for_window(window):
     return prefix
 
 
-def get_lookup_title(window):
-    """Get the lookup title for a window or workspace."""
+def get_lookup_title(window, show_workspace_prefix=False):
+    """
+    Get the lookup title for a window or workspace. If show_workspace_prefix is
+    given, prefix each item with the workspace number
+    """
     parts = window.get("name").split(" - ")
     wclass = window.get("window_properties", {}).get("class")
     mark = window.get("mark")
@@ -268,7 +280,7 @@ def get_lookup_title(window):
         parts = [part for part in parts if part.lower() != wclass.lower()]
         parts.insert(0, wclass)
 
-    prefix = prefix_for_window(window)
+    prefix = prefix_for_window(window) if show_workspace_prefix else ""
 
     title = prefix + " - ".join(parts)
     if mark:
@@ -276,11 +288,12 @@ def get_lookup_title(window):
     return title
 
 
-def create_lookup_table(windows):
+def create_lookup_table(windows, show_workspace_prefix=False):
     """
     Create a lookup table from the given list of windows or workspace.
 
     The returned dict is in the format window title → X window id.
+    show_workspace_prefix is passed through and governs how items are displayed
     """
     rename_nonunique(windows)
     lookup = {}
@@ -304,7 +317,7 @@ def create_lookup_table(windows):
                 break
         if ignore_window:
             continue
-        win_name = get_lookup_title(window)
+        win_name = get_lookup_title(window, show_workspace_prefix)
         if win_name in lookup:
             # duplicate name of previous window
             # add "(win_id)" as suffix in attempt to make unique
@@ -484,6 +497,10 @@ def main():
     parser.add_argument("-o", "--prompt", default=False, action="store_true",
                         help="show a prompt in dmenu describing the "
                         "action to perform")
+    parser.add_argument("--show-workspace-number", default=False,
+                        action="store_true",
+                        help="show the workspace number for each window in the "
+                        "dmenu list")
 
     args = parser.parse_args()
 
@@ -577,7 +594,7 @@ def main():
             action_func = goto_workspace
             dmenu_prompt = "focus {}".format(unit)
 
-    lookup = lookup_func()
+    lookup = lookup_func(args.show_workspace_number)
     dmenu_prompt_args = args.dmenu
     if args.prompt:
         dmenu_prompt_args += " -p '{}'".format(dmenu_prompt)
