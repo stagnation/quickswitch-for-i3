@@ -260,7 +260,8 @@ def prefix_for_window(window):
     workspace = window.get("workspace")
 
     if workspace and workspace != "__i3_scratch":
-        prefix = "workspace {} ".format(workspace) \
+        # TODO(nils): alignment
+        prefix = "[{}] ".format(workspace) \
                 + (" " if int(workspace) < 10 else "")
     else:
         prefix = "scratchpad   "
