@@ -29,10 +29,10 @@ import subprocess
 import shutil
 
 try:
-    import i3
+    import i3ipc
 except ImportError:
-    print("quickswitch requires i3-py.")
-    print("You can install it from the PyPI with ``pip install i3-py''.")
+    print("Error: quickswitch requires i3ipc.", file=sys.stderr)
+    print("You can install it from the PyPI with ``pip install i3ipc''.")
     sys.exit(os.EX_UNAVAILABLE)
 
 # Must use semver 2.0.0
@@ -43,6 +43,8 @@ default_dmenu_command = "dmenu -b -i -l 20"
 window_class_ignore_list = []
 follow = False
 follow_if_empty = False
+
+i3 = i3ipc.Connection()
 
 
 def check_dmenu():
@@ -79,25 +81,27 @@ def parse_for_windows(tree_dict, window_list=[], workspace=None):
     """
 
     is_leaf_node = False
-    if tree_dict.get('type') == "workspace":
-        workspace = tree_dict.get('name')
+    if tree_dict.type == "workspace":
+        workspace = tree_dict.name
 
-    if ("nodes" in tree_dict and len(tree_dict["nodes"]) > 0):
+    if len(tree_dict.nodes) > 0:
         is_leaf_node = True
-        for node in tree_dict["nodes"]:
+        for node in tree_dict.nodes:
             parse_for_windows(node, window_list, workspace)
 
-    if ("floating_nodes" in tree_dict and
-       len(tree_dict["floating_nodes"]) > 0):
+    if len(tree_dict.floating_nodes) > 0:
         is_leaf_node = True
-        for node in tree_dict["floating_nodes"]:
+        for node in tree_dict.floating_nodes:
             parse_for_windows(node, window_list, workspace)
 
     if not is_leaf_node:
-        if (tree_dict["layout"] != "dockarea" and
-           not tree_dict["window"] is None):
+        if (tree_dict.layout != "dockarea" and
+            True): # not tree_dict.window is None):
+            # TODO: Scratch area seems to come from the branch of the tree, not
+            # properties on individual nodes
+            # TODO: Rename `tree_dict`.
             window = tree_dict
-            window["workspace"] = workspace
+            window.workspace = workspace
             window_list.append(window)
 
     return window_list
@@ -143,7 +147,7 @@ def get_scratchpad(unused=None):
     """
     Get all windows on the scratchpad.
 
-    NOTE: The argument is not used but needed for compatibilty with get_windows
+    NOTE: The argument is not used but needed for compatibility with get_windows
     """
     scratchpad = i3.filter(name="__i3_scratch")[0]
     nodes = scratchpad["floating_nodes"]
@@ -184,15 +188,17 @@ def get_workspaces(unused=None):
     NOTE: This returns a map of name → name, which is rather redundant, but
     makes it possible to use the result without changing much in main().
 
-    NOTE: The argument is not used but needed for compatibilty with get_windows
+    NOTE: The argument is not used but needed for compatibility with get_windows
     """
     workspaces = i3.get_workspaces()
+    lookup = {}
     for ws in workspaces:
-        # create_lookup_table will set the value of all entries
+        # `create_lookup_table` will set the value of all entries
         # in the lookup table to the window id. We act as if the
         # workspace name is the window id.
-        ws["window"] = ws["name"]
-    return create_lookup_table(workspaces)
+        id = ws.name
+        lookup[id] = id
+    return lookup
 
 
 def first_empty():
@@ -253,11 +259,11 @@ def prefix_for_window(window):
     This functions checks whether a field exclusive to windows exists.
     """
 
-    if not window.get("border"):
+    if not window.border:
         # this is a workspace
         return ""
 
-    workspace = window.get("workspace")
+    workspace = window.workspace
 
     if workspace and workspace != "__i3_scratch":
         # TODO(nils): alignment
@@ -273,9 +279,9 @@ def get_lookup_title(window, formatting_function=None):
     """
     Get the lookup title for a window or workspace.
     """
-    parts = window.get("name").split(" - ")
-    wclass = window.get("window_properties", {}).get("class")
-    mark = window.get("mark")
+    parts = window.name.split(" - ")
+    wclass = window.window_class
+    marks = window.marks
     if wclass:
         parts = [part for part in parts if part.lower() != wclass.lower()]
         parts.insert(0, wclass)
@@ -283,8 +289,8 @@ def get_lookup_title(window, formatting_function=None):
     prefix = formatting_function(window) if formatting_function else ""
 
     title = prefix + " - ".join(parts)
-    if mark:
-        title += " [{}]".format(mark)
+    if marks:
+        title += " [{}]".format(marks)
     return title
 
 
@@ -298,12 +304,11 @@ def create_lookup_table(windows, formatting_function=None):
     rename_nonunique(windows)
     lookup = {}
     for window in windows:
-        win_name = window.get("name")
-        win_id = window.get("window")
+        win_name = window.name
+        win_id = window.id
         win_class = ""
-        if (window.get("window_properties") and
-           window["window_properties"].get("class")):
-            win_class = window["window_properties"]["class"]
+        if window.window_class:
+            win_class = window.window_class
         if win_id is None:
             # this is not an X window, ignore it.
             continue
@@ -329,7 +334,7 @@ def create_lookup_table(windows, formatting_function=None):
 
 def rename_nonunique(windows):
     """Rename all windows which share a name by appending an index."""
-    window_names = [window.get("name") for window in windows]
+    window_names = [window.name for window in windows]
     for name in window_names:
         count = window_names.count(name)
         if count > 1:
@@ -337,7 +342,7 @@ def rename_nonunique(windows):
                 index = window_names.index(name)
                 window_names[index] = "{} [{}]".format(name, i + 1)
     for i in range(len(windows)):
-        windows[i]["name"] = window_names[i]
+        windows[i].name = window_names[i]
 
 
 def get_scratchpad_window(window):
@@ -347,13 +352,13 @@ def get_scratchpad_window(window):
 
 def move_window_here(window):
     """Does `move workspace current` on the specified window."""
-    return i3.msg(0, "{} move workspace current".format(
+    return i3.command("{} move workspace current".format(
         i3.container(id=window)))
 
 
 def move_container_to_workspace(workspace):
     """Moves the current container to the selected workspace"""
-    ret = i3.msg(0, "move container to workspace {}".format(workspace))
+    ret = i3.command("move container to workspace {}".format(workspace))
     if follow or (follow_if_empty and is_current_workspace_empty()):
         goto_workspace(workspace)
     return ret
@@ -365,23 +370,23 @@ def rename_workspace(old, new_number):
     if not m:
         return
     new = "%d%s" % (new_number, m.group("name"))
-    return i3.msg(0, "rename workspace {} to {}".format(old, new))
+    return i3.command("rename workspace {} to {}".format(old, new))
 
 
 def focus(window):
     """Focuses the given window."""
-    return i3.focus(id=window)
+    return i3.command(f'[con_id="{window}"] focus')
 
 
 def goto_workspace(name):
     """Jump to the given workspace."""
-    return i3.workspace(name)
+    return i3.command(f"workspace {name}")
 
 
 def get_current_workspace():
     """Get the name of the currently active workspace."""
-    filtered = [ws for ws in i3.get_workspaces() if ws["focused"] is True]
-    return filtered[0]["name"] if filtered else None
+    filtered = [ws for ws in i3.get_workspaces() if ws.focused is True]
+    return filtered[0].name if filtered else None
 
 
 def is_current_workspace_empty():

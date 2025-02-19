@@ -3,10 +3,10 @@ quickswitch for i3
 
 Overview
 --------
-This utility for i3_, inspired by Pentadactyl_'s ``:buffers`` command,
+This utility for i3_ and sway_, inspired by Pentadactyl_'s ``:buffers`` command,
 allows you to quickly switch to and locate windows on all your
 workspaces, using an interactive dmenu prompt. It has since gained a lot
-of other functionality to make working with i3 even more efficient.
+of other functionality to make working with i3 and sway even more efficient.
 
 Usage
 -----
@@ -31,7 +31,7 @@ becomes empty without that container, you'll be glad you added the
 to the one where your container went. If you use ``-f/--follow``, you'll
 be following along whether your workspace becomes empty or not.
 
-A similiar feature is the ``-s/--scratchpad`` flag, which searches your
+A similar feature is the ``-s/--scratchpad`` flag, which searches your
 scratchpad, and does a ``scratchpad show`` on the window you choose.
 
 You can also search and jump (or move) via regular expression using the
@@ -148,5 +148,6 @@ head to http://sam.zoy.org/wtfpl/COPYING.
 
 .. _Pentadactyl: http://5digits.org/pentadactyl/
 .. _i3: http://i3wm.org
+.. _sway: https://swaywm.org
 
 .. vim: set tw=81:
